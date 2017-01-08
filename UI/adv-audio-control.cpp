@@ -17,7 +17,6 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *layout, obs_source_t *source_)
 	QHBoxLayout *hlayout;
 	signal_handler_t *handler = obs_source_get_signal_handler(source);
 	const char *sourceName = obs_source_get_name(source);
-	float vol = obs_source_get_volume(source);
 	uint32_t flags = obs_source_get_flags(source);
 	uint32_t mixers = obs_source_get_audio_mixers(source);
 
@@ -27,7 +26,6 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *layout, obs_source_t *source_)
 	labelL                         = new QLabel();
 	labelR                         = new QLabel();
 	nameLabel                      = new QLabel();
-	volume                         = new QSpinBox();
 	forceMono                      = new QCheckBox();
 	panning                        = new QSlider(Qt::Horizontal);
 	syncOffset                     = new QSpinBox();
@@ -38,8 +36,6 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *layout, obs_source_t *source_)
 	mixer5                         = new QCheckBox();
 	mixer6                         = new QCheckBox();
 
-	volChangedSignal.Connect(handler, "volume", OBSSourceVolumeChanged,
-			this);
 	syncOffsetSignal.Connect(handler, "audio_sync", OBSSourceSyncChanged,
 			this);
 	flagsSignal.Connect(handler, "update_flags", OBSSourceFlagsChanged,
@@ -65,10 +61,6 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *layout, obs_source_t *source_)
 	nameLabel->setMinimumWidth(170);
 	nameLabel->setText(QT_UTF8(sourceName));
 	nameLabel->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-
-	volume->setMinimum(0);
-	volume->setMaximum(2000);
-	volume->setValue(int(vol * 100.0f));
 
 	forceMono->setChecked((flags & OBS_SOURCE_FLAG_FORCE_MONO) != 0);
 
@@ -112,8 +104,6 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *layout, obs_source_t *source_)
 	mixerContainer->layout()->addWidget(mixer5);
 	mixerContainer->layout()->addWidget(mixer6);
 
-	QWidget::connect(volume, SIGNAL(valueChanged(int)),
-			this, SLOT(volumeChanged(int)));
 	QWidget::connect(forceMono, SIGNAL(clicked(bool)),
 			this, SLOT(downmixMonoChanged(bool)));
 	QWidget::connect(panning, SIGNAL(valueChanged(int)),
@@ -136,11 +126,10 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *layout, obs_source_t *source_)
 	int lastRow = layout->rowCount();
 
 	layout->addWidget(nameLabel, lastRow, 0);
-	layout->addWidget(volume, lastRow, 1);
-	layout->addWidget(forceMonoContainer, lastRow, 2);
-	layout->addWidget(panningContainer, lastRow, 3);
-	layout->addWidget(syncOffset, lastRow, 4);
-	layout->addWidget(mixerContainer, lastRow, 5);
+	layout->addWidget(forceMonoContainer, lastRow, 1);
+	layout->addWidget(panningContainer, lastRow, 2);
+	layout->addWidget(syncOffset, lastRow, 3);
+	layout->addWidget(mixerContainer, lastRow, 4);
 	layout->layout()->setAlignment(mixerContainer,
 			Qt::AlignHCenter | Qt::AlignVCenter);
 }
@@ -148,7 +137,6 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *layout, obs_source_t *source_)
 OBSAdvAudioCtrl::~OBSAdvAudioCtrl()
 {
 	nameLabel->deleteLater();
-	volume->deleteLater();
 	forceMonoContainer->deleteLater();
 	panningContainer->deleteLater();
 	syncOffset->deleteLater();
@@ -164,13 +152,6 @@ void OBSAdvAudioCtrl::OBSSourceFlagsChanged(void *param, calldata_t *calldata)
 	QMetaObject::invokeMethod(reinterpret_cast<OBSAdvAudioCtrl*>(param),
 			"SourceFlagsChanged", Q_ARG(uint32_t, flags));
 
-}
-
-void OBSAdvAudioCtrl::OBSSourceVolumeChanged(void *param, calldata_t *calldata)
-{
-	float volume = (float)calldata_float(calldata, "volume");
-	QMetaObject::invokeMethod(reinterpret_cast<OBSAdvAudioCtrl*>(param),
-			"SourceVolumeChanged", Q_ARG(float, volume));
 }
 
 void OBSAdvAudioCtrl::OBSSourceSyncChanged(void *param, calldata_t *calldata)
@@ -203,13 +184,6 @@ void OBSAdvAudioCtrl::SourceFlagsChanged(uint32_t flags)
 	setCheckboxState(forceMono, forceMonoVal);
 }
 
-void OBSAdvAudioCtrl::SourceVolumeChanged(float value)
-{
-	volume->blockSignals(true);
-	volume->setValue(int(round(value * 100.0f)));
-	volume->blockSignals(false);
-}
-
 void OBSAdvAudioCtrl::SourceSyncChanged(int64_t offset)
 {
 	syncOffset->setValue(offset / NSEC_PER_MSEC);
@@ -227,12 +201,6 @@ void OBSAdvAudioCtrl::SourceMixersChanged(uint32_t mixers)
 
 /* ------------------------------------------------------------------------- */
 /* Qt control callbacks */
-
-void OBSAdvAudioCtrl::volumeChanged(int percentage)
-{
-	float val = float(percentage) / 100.0f;
-	obs_source_set_volume(source, val);
-}
 
 void OBSAdvAudioCtrl::downmixMonoChanged(bool checked)
 {

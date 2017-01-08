@@ -27,21 +27,18 @@ OBSBasicAdvAudio::OBSBasicAdvAudio(QWidget *parent)
 	label = new QLabel(QTStr("Basic.AdvAudio.Name"));
 	label->setAlignment(Qt::AlignHCenter);
 	mainLayout->addWidget(label, 0, 0);
-	label = new QLabel(QTStr("Basic.AdvAudio.Volume"));
-	label->setAlignment(Qt::AlignHCenter);
-	mainLayout->addWidget(label, 0, 1);
 	label = new QLabel(QTStr("Basic.AdvAudio.Mono"));
 	label->setAlignment(Qt::AlignHCenter);
-	mainLayout->addWidget(label, 0, 2);
+	mainLayout->addWidget(label, 0, 1);
 	label = new QLabel(QTStr("Basic.AdvAudio.Panning"));
 	label->setAlignment(Qt::AlignHCenter);
-	mainLayout->addWidget(label, 0, 3);
+	mainLayout->addWidget(label, 0, 2);
 	label = new QLabel(QTStr("Basic.AdvAudio.SyncOffset"));
 	label->setAlignment(Qt::AlignHCenter);
-	mainLayout->addWidget(label, 0, 4);
+	mainLayout->addWidget(label, 0, 3);
 	label = new QLabel(QTStr("Basic.AdvAudio.AudioTracks"));
 	label->setAlignment(Qt::AlignHCenter);
-	mainLayout->addWidget(label, 0, 5);
+	mainLayout->addWidget(label, 0, 4);
 
 	controlArea = new QWidget;
 	controlArea->setLayout(mainLayout);
