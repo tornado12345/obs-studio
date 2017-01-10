@@ -383,6 +383,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->colorRange,           COMBO_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->disableOSXVSync,      CHECK_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->resetOSXVSync,        CHECK_CHANGED,  ADV_CHANGED);
+	HookWidget(ui->monitoringDevice,     COMBO_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->filenameFormatting,   EDIT_CHANGED,   ADV_CHANGED);
 	HookWidget(ui->overwriteIfExists,    CHECK_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->simpleRBPrefix,       EDIT_CHANGED,   ADV_CHANGED);
@@ -527,6 +528,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 	FillSimpleRecordingValues();
 	FillSimpleStreamingValues();
+	FillAudioMonitoringDevices();
 
 	connect(ui->simpleOutRecQuality, SIGNAL(currentIndexChanged(int)),
 			this, SLOT(SimpleRecordingQualityChanged()));
@@ -1896,6 +1898,10 @@ void OBSBasicSettings::LoadAdvancedSettings()
 			"Video", "ColorSpace");
 	const char *videoColorRange = config_get_string(main->Config(),
 			"Video", "ColorRange");
+	const char *monDevName = config_get_string(main->Config(), "Audio",
+			"MonitoringDeviceName");
+	const char *monDevId = config_get_string(main->Config(), "Audio",
+			"MonitoringDeviceId");
 	bool enableDelay = config_get_bool(main->Config(), "Output",
 			"DelayEnable");
 	int delaySec = config_get_int(main->Config(), "Output",
@@ -1922,6 +1928,23 @@ void OBSBasicSettings::LoadAdvancedSettings()
 	loading = true;
 
 	LoadRendererList();
+
+	QComboBox *cb = ui->monitoringDevice;
+	int idx = cb->findData(monDevId);
+	if (idx == -1) {
+		cb->insertItem(0, monDevName, monDevId);
+
+		QStandardItemModel *model =
+			dynamic_cast<QStandardItemModel*>(cb->model());
+		if (!model)
+			return;
+
+		QStandardItem *item = model->item(0);
+		item->setFlags(Qt::NoItemFlags);
+
+		idx = 0;
+	}
+	cb->setCurrentIndex(idx);
 
 	ui->filenameFormatting->setText(filename);
 	ui->overwriteIfExists->setChecked(overwriteIfExists);
@@ -1957,7 +1980,7 @@ void OBSBasicSettings::LoadAdvancedSettings()
 #elif _WIN32
 	const char *processPriority = config_get_string(App()->GlobalConfig(),
 			"General", "ProcessPriority");
-	int idx = ui->processPriority->findData(processPriority);
+	idx = ui->processPriority->findData(processPriority);
 	if (idx == -1)
 		idx = ui->processPriority->findData("Normal");
 	ui->processPriority->setCurrentIndex(idx);
@@ -2432,6 +2455,8 @@ void OBSBasicSettings::SaveAdvancedSettings()
 	SaveCombo(ui->colorFormat, "Video", "ColorFormat");
 	SaveCombo(ui->colorSpace, "Video", "ColorSpace");
 	SaveComboData(ui->colorRange, "Video", "ColorRange");
+	SaveCombo(ui->monitoringDevice, "Audio", "MonitoringDeviceName");
+	SaveComboData(ui->monitoringDevice, "Audio", "MonitoringDeviceId");
 	SaveEdit(ui->filenameFormatting, "Output", "FilenameFormatting");
 	SaveEdit(ui->simpleRBPrefix, "SimpleOutput", "RecRBPrefix");
 	SaveEdit(ui->simpleRBSuffix, "SimpleOutput", "RecRBSuffix");
@@ -2443,6 +2468,11 @@ void OBSBasicSettings::SaveAdvancedSettings()
 	SaveSpinBox(ui->reconnectRetryDelay, "Output", "RetryDelay");
 	SaveSpinBox(ui->reconnectMaxRetries, "Output", "MaxRetries");
 	SaveComboData(ui->bindToIP, "Output", "BindIP");
+
+	obs_set_audio_monitoring_device(
+			QT_TO_UTF8(ui->monitoringDevice->currentText()),
+			QT_TO_UTF8(ui->monitoringDevice->currentData()
+				.toString()));
 }
 
 static inline const char *OutputModeFromIdx(int idx)
@@ -3384,6 +3414,23 @@ void OBSBasicSettings::FillSimpleStreamingValues()
 				ENCODER_STR("Hardware.AMD"),
 				QString(SIMPLE_ENCODER_AMD));
 #undef ENCODER_STR
+}
+
+void OBSBasicSettings::FillAudioMonitoringDevices()
+{
+	QComboBox *cb = ui->monitoringDevice;
+
+	auto enum_devices = [] (void *param, const char *name, const char *id)
+	{
+		QComboBox *cb = (QComboBox*)param;
+		cb->addItem(name, id);
+		return true;
+	};
+
+	cb->addItem(QTStr("Basic.Settings.Advanced.Audio.MonitoringDevice"
+				".Default"), "default");
+
+	obs_enum_audio_monitoring_devices(enum_devices, cb);
 }
 
 void OBSBasicSettings::SimpleRecordingQualityChanged()
