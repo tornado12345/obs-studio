@@ -210,6 +210,11 @@ void obs_frontend_replay_buffer_start(void)
 	if (callbacks_valid()) c->obs_frontend_replay_buffer_start();
 }
 
+void obs_frontend_replay_buffer_save(void)
+{
+	if (callbacks_valid()) c->obs_frontend_replay_buffer_save();
+}
+
 void obs_frontend_replay_buffer_stop(void)
 {
 	if (callbacks_valid()) c->obs_frontend_replay_buffer_stop();
@@ -292,6 +297,18 @@ void obs_frontend_save(void)
 		c->obs_frontend_save();
 }
 
+void obs_frontend_defer_save_begin(void)
+{
+	if (callbacks_valid())
+		c->obs_frontend_defer_save_begin();
+}
+
+void obs_frontend_defer_save_end(void)
+{
+	if (callbacks_valid())
+		c->obs_frontend_defer_save_end();
+}
+
 void obs_frontend_add_save_callback(obs_frontend_save_cb callback,
 		void *private_data)
 {
@@ -306,6 +323,20 @@ void obs_frontend_remove_save_callback(obs_frontend_save_cb callback,
 		c->obs_frontend_remove_save_callback(callback, private_data);
 }
 
+void obs_frontend_add_preload_callback(obs_frontend_save_cb callback,
+		void *private_data)
+{
+	if (callbacks_valid())
+		c->obs_frontend_add_preload_callback(callback, private_data);
+}
+
+void obs_frontend_remove_preload_callback(obs_frontend_save_cb callback,
+		void *private_data)
+{
+	if (callbacks_valid())
+		c->obs_frontend_remove_preload_callback(callback, private_data);
+}
+
 void obs_frontend_push_ui_translation(obs_frontend_translate_ui_cb translate)
 {
 	if (callbacks_valid())
@@ -316,4 +347,62 @@ void obs_frontend_pop_ui_translation(void)
 {
 	if (callbacks_valid())
 		c->obs_frontend_pop_ui_translation();
+}
+
+void obs_frontend_set_streaming_service(obs_service_t *service)
+{
+	if (callbacks_valid())
+		c->obs_frontend_set_streaming_service(service);
+}
+
+obs_service_t* obs_frontend_get_streaming_service(void)
+{
+	return !!callbacks_valid()
+		? c->obs_frontend_get_streaming_service()
+		: nullptr;
+}
+
+void obs_frontend_save_streaming_service(void)
+{
+	if (callbacks_valid())
+		c->obs_frontend_save_streaming_service();
+}
+
+bool obs_frontend_preview_program_mode_active(void)
+{
+	return !!callbacks_valid()
+		? c->obs_frontend_preview_program_mode_active()
+		: false;
+}
+
+void obs_frontend_set_preview_program_mode(bool enable)
+{
+	if (callbacks_valid())
+		c->obs_frontend_set_preview_program_mode(enable);
+}
+
+void obs_frontend_set_preview_enabled(bool enable)
+{
+	if (callbacks_valid())
+		c->obs_frontend_set_preview_enabled(enable);
+}
+
+bool obs_frontend_preview_enabled(void)
+{
+	return !!callbacks_valid()
+		? c->obs_frontend_preview_enabled()
+		: false;
+}
+
+obs_source_t *obs_frontend_get_current_preview_scene(void)
+{
+	return !!callbacks_valid()
+		? c->obs_frontend_get_current_preview_scene()
+		: nullptr;
+}
+
+void obs_frontend_set_current_preview_scene(obs_source_t *scene)
+{
+	if (callbacks_valid())
+		c->obs_frontend_set_current_preview_scene(scene);
 }

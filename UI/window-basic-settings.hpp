@@ -37,6 +37,10 @@ class OBSHotkeyWidget;
 
 #include "ui_OBSBasicSettings.h"
 
+#define VOLUME_METER_DECAY_FAST        23.53
+#define VOLUME_METER_DECAY_MEDIUM      11.76
+#define VOLUME_METER_DECAY_SLOW        8.57
+
 class SilentUpdateCheckBox : public QCheckBox {
 	Q_OBJECT
 
@@ -98,6 +102,7 @@ private:
 	std::string savedTheme;
 
 	int lastSimpleRecQualityIdx = 0;
+	int lastChannelSetupIdx = 0;
 
 	OBSFFFormatDesc formats;
 
@@ -240,6 +245,7 @@ private:
 
 	void FillSimpleRecordingValues();
 	void FillSimpleStreamingValues();
+	void FillAudioMonitoringDevices();
 
 	void RecalcOutputResPixels(const char *resText);
 
@@ -255,6 +261,7 @@ private slots:
 	void on_advOutFFPathBrowse_clicked();
 	void on_advOutEncoder_currentIndexChanged(int idx);
 	void on_advOutRecEncoder_currentIndexChanged(int idx);
+	void on_advOutFFIgnoreCompat_stateChanged(int state);
 	void on_advOutFFFormat_currentIndexChanged(int idx);
 	void on_advOutFFAEncoder_currentIndexChanged(int idx);
 	void on_advOutFFVEncoder_currentIndexChanged(int idx);
@@ -272,6 +279,8 @@ private slots:
 	void AudioChanged();
 	void AudioChangedRestart();
 	void ReloadAudioSources();
+	void SurroundWarning(int idx);
+	void SpeakerLayoutChanged(int idx);
 	void OutputsChanged();
 	void Stream1Changed();
 	void VideoChanged();
@@ -284,6 +293,8 @@ private slots:
 
 	void UpdateStreamDelayEstimate();
 
+	void UpdateAutomaticReplayBufferCheckboxes();
+
 	void AdvOutRecCheckWarnings();
 
 	void SimpleRecordingQualityChanged();
@@ -291,6 +302,7 @@ private slots:
 	void SimpleRecordingQualityLosslessWarning(int idx);
 
 	void SimpleReplayBufferChanged();
+	void AdvReplayBufferChanged();
 
 	void SimpleStreamingEncoderChanged();
 
@@ -299,4 +311,5 @@ protected:
 
 public:
 	OBSBasicSettings(QWidget *parent);
+	~OBSBasicSettings();
 };

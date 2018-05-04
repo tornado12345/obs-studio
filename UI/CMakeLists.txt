@@ -1,4 +1,3 @@
-option(ENABLE_UI "Enables the OBS user interfaces" ON)
 if(DISABLE_UI)
 	message(STATUS "UI disabled")
 	return()
@@ -13,6 +12,8 @@ add_subdirectory(obs-frontend-api)
 # ----------------------------------------------------------------------------
 
 project(obs)
+
+set(ENABLE_WIN_UPDATER FALSE CACHE BOOL "Enable the windows updater")
 
 if(DEFINED QTDIR${_lib_suffix})
 	list(APPEND CMAKE_PREFIX_PATH "${QTDIR${_lib_suffix}}")
@@ -34,6 +35,11 @@ else()
 endif()
 
 find_package(Qt5Widgets ${FIND_MODE})
+find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil avformat)
+
+if(APPLE)
+	find_package(Qt5MacExtras REQUIRED)
+endif(APPLE)
 
 if(NOT Qt5Widgets_FOUND)
 	if (ENABLE_UI)
@@ -44,17 +50,38 @@ if(NOT Qt5Widgets_FOUND)
 	endif()
 endif()
 
+
+include_directories(${FFMPEG_INCLUDE_DIRS})
 include_directories(SYSTEM "obs-frontend-api")
 include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/libobs")
+include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/deps/libff")
 
 find_package(Libcurl REQUIRED)
 include_directories(${LIBCURL_INCLUDE_DIRS})
 add_definitions(${LIBCURL_DEFINITIONS})
 
 if(WIN32)
+	include_directories(${OBS_JANSSON_INCLUDE_DIRS})
+	include_directories(${BLAKE2_INCLUDE_DIR})
+
 	set(obs_PLATFORM_SOURCES
 		platform-windows.cpp
+		win-update/update-window.cpp
+		win-update/win-update.cpp
+		win-update/win-update-helpers.cpp
 		obs.rc)
+	set(obs_PLATFORM_HEADERS
+		win-update/update-window.hpp
+		win-update/win-update.hpp
+		win-update/win-update-helpers.hpp)
+	set(obs_PLATFORM_LIBRARIES
+		crypt32
+		blake2
+		${OBS_JANSSON_IMPORT})
+
+	if(ENABLE_WIN_UPDATER)
+		add_definitions(-DENABLE_WIN_UPDATER)
+	endif()
 elseif(APPLE)
 	set(obs_PLATFORM_SOURCES
 		platform-osx.mm)
@@ -87,17 +114,35 @@ elseif(UNIX)
                 Qt5::X11Extras)
 endif()
 
+set(obs_libffutil_SOURCES
+	../deps/libff/libff/ff-util.c
+	)
+set(obs_libffutil_HEADERS
+	../deps/libff/libff/ff-util.h
+	)
+
+if(MSVC)
+	set_source_files_properties(
+		../deps/libff/libff/ff-util.c
+		PROPERTIES COMPILE_FLAGS -Dinline=__inline
+		)
+endif()
+
 set(obs_SOURCES
 	${obs_PLATFORM_SOURCES}
+	${obs_libffutil_SOURCES}
 	obs-app.cpp
 	api-interface.cpp
 	window-basic-main.cpp
+	window-basic-stats.cpp
 	window-basic-filters.cpp
 	window-basic-settings.cpp
 	window-basic-interaction.cpp
 	window-basic-properties.cpp
+	window-basic-auto-config.cpp
 	window-basic-main-outputs.cpp
 	window-basic-source-select.cpp
+	window-basic-auto-config-test.cpp
 	window-basic-main-scene-collections.cpp
 	window-basic-main-transitions.cpp
 	window-basic-main-dropfiles.cpp
@@ -119,6 +164,7 @@ set(obs_SOURCES
 	adv-audio-control.cpp
 	item-widget-helpers.cpp
 	visibility-checkbox.cpp
+	locked-checkbox.cpp
 	vertical-scroll-area.cpp
 	visibility-item-widget.cpp
 	slider-absoluteset-style.cpp
@@ -132,14 +178,18 @@ set(obs_SOURCES
 	qt-wrappers.cpp)
 
 set(obs_HEADERS
+	${obs_PLATFORM_HEADERS}
+	${obs_libffutil_HEADERS}
 	obs-app.hpp
 	platform.hpp
 	window-main.hpp
 	window-basic-main.hpp
+	window-basic-stats.hpp
 	window-basic-filters.hpp
 	window-basic-settings.hpp
 	window-basic-interaction.hpp
 	window-basic-properties.hpp
+	window-basic-auto-config.hpp
 	window-basic-main-outputs.hpp
 	window-basic-source-select.hpp
 	window-license-agreement.hpp
@@ -162,6 +212,7 @@ set(obs_HEADERS
 	adv-audio-control.hpp
 	item-widget-helpers.hpp
 	visibility-checkbox.hpp
+	locked-checkbox.hpp
 	vertical-scroll-area.hpp
 	visibility-item-widget.hpp
 	slider-absoluteset-style.hpp
@@ -176,6 +227,10 @@ set(obs_HEADERS
 
 set(obs_UI
 	forms/NameDialog.ui
+	forms/AutoConfigStartPage.ui
+	forms/AutoConfigVideoPage.ui
+	forms/AutoConfigStreamPage.ui
+	forms/AutoConfigTestPage.ui
 	forms/OBSLicenseAgreement.ui
 	forms/OBSLogReply.ui
 	forms/OBSBasic.ui
@@ -184,6 +239,7 @@ set(obs_UI
 	forms/OBSBasicSettings.ui
 	forms/OBSBasicSourceSelect.ui
 	forms/OBSBasicInteraction.ui
+	forms/OBSUpdate.ui
 	forms/OBSRemux.ui)
 
 set(obs_QRC
@@ -212,11 +268,25 @@ endif()
 
 target_link_libraries(obs
 	libobs
-	libff
 	Qt5::Widgets
 	obs-frontend-api
+	${FFMPEG_LIBRARIES}
 	${LIBCURL_LIBRARIES}
 	${obs_PLATFORM_LIBRARIES})
+
+if (APPLE)
+	target_link_libraries(obs
+			Qt5::MacExtras)
+	set_target_properties(obs PROPERTIES LINK_FLAGS "-pagezero_size 10000 -image_base 100000000")
+	set_property(
+		TARGET obs
+		APPEND
+		PROPERTY INSTALL_RPATH
+		"/usr/local/Cellar/python3/3.6.4_2/Frameworks/Python.framework/Versions/3.6/lib/"
+		"/Library/Frameworks/Python.framework/Versions/3.6/lib/"
+		"/opt/local/Library/Frameworks/Python.framework/Versions/3.6/lib/"
+	)
+endif()
 
 define_graphic_modules(obs)
 
@@ -230,3 +300,6 @@ if (UNIX AND UNIX_STRUCTURE AND NOT APPLE)
 endif()
 
 add_subdirectory(frontend-plugins)
+if(WIN32)
+	add_subdirectory(win-update/updater)
+endif()
