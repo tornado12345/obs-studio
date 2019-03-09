@@ -1,7 +1,3 @@
-if(NOT ENABLE_WIN_UPDATER)
-	return()
-endif()
-
 if(DISABLE_UPDATE_MODULE)
 	return()
 endif()
@@ -36,7 +32,7 @@ set(updater_SOURCES
 
 add_definitions(-DNOMINMAX -DUNICODE -D_UNICODE)
 if(MSVC)
-	add_compile_options("$<$<CONFIG:RelWithDebInfo>:/MT>")
+	add_compile_options($<IF:$<CONFIG:Debug>,/MTd,/MT>)
 endif()
 
 add_executable(updater WIN32
